@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">RManager</string>
+    <string name="tab_all_recordings">All Recordings</string>
+    <string name="tab_saved">Saved</string>
+    <string name="title_activity_recording_details">ScrollingActivity</string>
+    <string name="action_settings">Settings</string>
+</resources>
