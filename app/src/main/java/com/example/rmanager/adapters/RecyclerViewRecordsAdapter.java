@@ -39,7 +39,7 @@ public class RecyclerViewRecordsAdapter  extends RecyclerView.Adapter<RecyclerVi
     @Override
     public void onBindViewHolder(final ViewHolder holder, int position) {
         Recording recording = mRecordings.get(position);
-        holder.myCard.setChecked(recording.checkIfSaved(mDRecordings == null?new ArrayList<Recording>():mDRecordings));
+        holder.myCard.setChecked(recording.isSelected(mDRecordings == null?new ArrayList<Recording>():mDRecordings));
         holder.myTextViewName.setText(recording.get_contactName());
         holder.myTextViewDate.setText(recording.get_date());
         holder.myImageViewSave.setImageResource(recording.is_saved()?R.mipmap.baseline_star:R.mipmap.outline_star);

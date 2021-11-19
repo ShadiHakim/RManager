@@ -47,7 +47,7 @@ public class DialogPlayer extends Dialog {
         textView_date.setText(recording.get_date());
 
         activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_NOSENSOR);
-        player = new M4aPlayer(getContext(),recording.get_location(), textViewB, textViewE, button_play_pause, seekBar);
+        player = new M4aPlayer(getContext(),recording.get_path(), textViewB, textViewE, button_play_pause, seekBar);
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.example.rmanager.ui.main;
 
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
@@ -12,6 +13,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.FileProvider;
@@ -26,7 +28,7 @@ import com.example.rmanager.adapters.RecyclerViewRecordsAdapter;
 import com.example.rmanager.classes.Recording;
 import com.example.rmanager.R;
 import com.example.rmanager.player.DialogPlayer;
-import com.example.rmanager.save.DBManager;
+//import com.example.rmanager.save.DBManager;
 import com.example.rmanager.utilities.DeleteUtil;
 import com.example.rmanager.utilities.RecordUtil;
 import com.example.rmanager.utilities.SavedUtil;
@@ -114,6 +116,9 @@ public class PlaceholderFragment extends Fragment implements RecyclerViewRecords
             case R.id.share:
                 share();
                 return true;
+            case R.id.settings:
+
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -173,9 +178,17 @@ public class PlaceholderFragment extends Fragment implements RecyclerViewRecords
             else
                 removeFromSelectedList(recording);
         }
-        else {
+        else {// TODO fix when moving
             DialogPlayer dialogPlayer = new DialogPlayer(getActivity(), recording);
             dialogPlayer.show();
+//            Intent intent = new Intent(); // intent to external app
+//            intent.setAction(android.content.Intent.ACTION_VIEW);
+//            File file = new File(recording.get_path());
+//            Uri uri = FileProvider.getUriForFile(getContext(), getContext().getApplicationContext().getPackageName() + ".provider", file);
+//            intent.setDataAndType(uri, "audio/*");
+//            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+//            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+//            startActivity(intent);
         }
     }
 
@@ -190,6 +203,14 @@ public class PlaceholderFragment extends Fragment implements RecyclerViewRecords
             if (((MaterialCardView)view).isChecked()){
                 DialogPlayer dialogPlayer = new DialogPlayer(getActivity(), recording);
                 dialogPlayer.show();
+//                Intent intent = new Intent(); // TODO intent to external app
+//                intent.setAction(android.content.Intent.ACTION_VIEW);
+//                File file = new File(recording.get_path());
+//                Uri uri = FileProvider.getUriForFile(getContext(), getContext().getApplicationContext().getPackageName() + ".provider", file);
+//                intent.setDataAndType(uri, "audio/*");
+//                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+//                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+//                startActivity(intent);
             }
         }
     }
@@ -197,8 +218,8 @@ public class PlaceholderFragment extends Fragment implements RecyclerViewRecords
     //----------------------------------------------------------------------------------
 
     public void setupInitialization(){
-        ArrayList<Recording> savedRecordings = RecordUtil.getSavedRecordings(getContext());
-        ArrayList<Recording> recordings = RecordUtil.initializeRecordings(getContext(),"Call", 0, savedRecordings);
+        ArrayList<Recording> savedRecordings = RecordUtil.getRecordings(getContext(),"SavedCall");
+        ArrayList<Recording> recordings = RecordUtil.getRecordings(getContext(),"Call");
         pageViewModel.init(recordings,savedRecordings);
     }
 
@@ -238,22 +259,18 @@ public class PlaceholderFragment extends Fragment implements RecyclerViewRecords
         for (Recording deletedRecording :
                 deletedRecordings) {
             pageViewModel.removeRecordings(deletedRecording);
-            if (deletedRecording.is_saved()) {
-                DBManager dbManager = new DBManager(getContext());
-                dbManager.open();
-                dbManager.delete(deletedRecording.get_location());
-            }
         }
     }
 
     public void delete(){
+        final ArrayList<Recording> DRecordings = pageViewModel.getSelectedRecordings(tab).getValue();
         new AlertDialog.Builder(getContext())
                 .setTitle("Delete")
-                .setMessage("Do you want to Delete")
+                .setMessage("Do you want to delete the (" + DRecordings.size() + ") Recordings?")
                 .setPositiveButton("Delete", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int whichButton) {
-                        ArrayList<Recording> DRecordings = pageViewModel.getSelectedRecordings(tab).getValue();
-                        DeleteUtil.deleteAllSelectedRecordings(getContext(),DRecordings);
+                        DeleteUtil deleteUtil = new DeleteUtil();
+                        deleteUtil.deleteAllSelectedRecordings(getContext(),DRecordings);
                         removeDeletedfromList(DRecordings);
                         if (tab == 1)
                             pageViewModel.clearSAllRecords();
@@ -282,7 +299,7 @@ public class PlaceholderFragment extends Fragment implements RecyclerViewRecords
         ArrayList<Uri> files = new ArrayList<Uri>();
 
         for(Recording recording : SRecordings) {
-            File file = new File(recording.get_location());
+            File file = new File(recording.get_path());
             Uri uri = FileProvider.getUriForFile(getContext(), getContext().getApplicationContext().getPackageName() + ".provider", file);
             files.add(uri);
         }
@@ -308,29 +325,24 @@ public class PlaceholderFragment extends Fragment implements RecyclerViewRecords
     //----------------------------------------------------------------------------------
 
     public void saveFunc(final Recording recording){
-        final DBManager dbManager = new DBManager(getContext());
-        dbManager.open();
         if (!recording.is_saved()){
             new AlertDialog.Builder(getContext())
                     .setTitle("Save")
                     .setMessage("Do you want to Save")
                     .setPositiveButton("Save", new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int whichButton) {
-                            try {
-                                SavedUtil.copyFile(new File(recording.get_location()), new File(RecordUtil.getNewPathDirectory(recording, "Call", "SavedCall")));
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                                    SavedUtil.copy(new File(recording.get_location()), RecordUtil.getNewPathDirectory(recording, "Call", "SavedCall"), getContext());
-                                }
-                            }
-                            DeleteUtil.delete(getContext(), new File(recording.get_location()));
-                            recording.set_location(RecordUtil.getNewPathDirectory(recording, "Call", "SavedCall"));
-                            recording.set_saved(true);
-                            dbManager.insert(recording);
-                            pageViewModel.updateAllRecords(recording);
-                            pageViewModel.updateSavedRecords(recording);
                             dialog.dismiss();
+                            ProgressDialog loading = getLoadingDialog("Saving");
+                            loading.show();
+                            if (SavedUtil.move(recording.get_file_name(),"Call", "SavedCall", getContext())) {
+                                recording.set_saved(true);
+                                pageViewModel.updateAllRecords(recording);
+                                pageViewModel.updateSavedRecords(recording);
+                                loading.dismiss();
+                            }
+                            else {
+                                Toast.makeText(getContext(), "error moving", Toast.LENGTH_SHORT).show();
+                            }
                         }
 
                     })
@@ -348,21 +360,18 @@ public class PlaceholderFragment extends Fragment implements RecyclerViewRecords
                     .setMessage("Do you want to remove saved")
                     .setPositiveButton("Remove", new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int whichButton) {
-                            try {
-                                SavedUtil.copyFile(new File(recording.get_location()),new File(RecordUtil.getNewPathDirectory(recording,"SavedCall","Call")));
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                                    SavedUtil.copy(new File(recording.get_location()), RecordUtil.getNewPathDirectory(recording, "SavedCall", "Call"), getContext());
-                                }
-                            }
-                            DeleteUtil.delete(getContext(),new File(recording.get_location()));
-                            dbManager.delete(recording.get_location());
-                            recording.set_location(RecordUtil.getNewPathDirectory(recording,"SavedCall","Call"));
-                            recording.set_saved(false);
-                            pageViewModel.updateAllRecords(recording);
-                            pageViewModel.updateSavedRecords(recording);
                             dialog.dismiss();
+                            ProgressDialog loading = getLoadingDialog("Moving to all");
+                            loading.show();
+                            if (SavedUtil.move(recording.get_file_name(), "SavedCall", "Call", getContext())){
+                                recording.set_saved(false);
+                                pageViewModel.updateAllRecords(recording);
+                                pageViewModel.updateSavedRecords(recording);
+                                loading.dismiss();
+                            }
+                            else {
+                                Toast.makeText(getContext(), "error moving", Toast.LENGTH_SHORT).show();
+                            }
                         }
 
                     })
@@ -376,4 +385,13 @@ public class PlaceholderFragment extends Fragment implements RecyclerViewRecords
         }
     }
 
+    public ProgressDialog getLoadingDialog(String title){
+        ProgressDialog loading = new ProgressDialog(getContext());
+        loading.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+        loading.setTitle(title);
+        loading.setMessage("Please wait...");
+        loading.setIndeterminate(true);
+        loading.setCanceledOnTouchOutside(false);
+        return loading;
+    }
 }
